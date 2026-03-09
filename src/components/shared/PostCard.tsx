@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Edit2 } from 'lucide-react'
+import { Heart, MessageCircle, MoreHorizontal, Trash2, Edit2, Share2 } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Avatar } from '@/components/ui/Avatar'
@@ -8,13 +8,11 @@ import { cn, timeAgo, formatCount, getCategoryInfo, truncate } from '@/lib/utils
 import toast from 'react-hot-toast'
 import type { Id } from '../../../convex/_generated/dataModel'
 
-const CATEGORY_COLORS: Record<string, string> = {
-  campus:        '#7C3AED',
-  relationships: '#F43F5E',
-  friendships:   '#10B981',
-  academics:     '#F59E0B',
-  hot_takes:     '#EF4444',
-  secrets:       '#8B5CF6',
+interface Profile {
+  _id: Id<'profiles'>
+  username: string
+  avatarSeed: string
+  avatarEmoji?: string
 }
 
 interface PostCardProps {
@@ -27,7 +25,7 @@ interface PostCardProps {
     likeCount: number
     commentCount: number
     createdAt: number
-    authorProfile?: { username: string; avatarSeed: string; avatarEmoji?: string } | null
+    authorProfile?: Profile | null
     liked?: boolean
   }
   currentUserId?: Id<'users'>
@@ -35,7 +33,7 @@ interface PostCardProps {
   showFullContent?: boolean
 }
 
-export function PostCard({ post, compact, showFullContent }: PostCardProps) {
+export function PostCard({ post, currentUserId, compact, showFullContent }: PostCardProps) {
   const [liked, setLiked] = useState(post.liked ?? false)
   const [likeCount, setLikeCount] = useState(post.likeCount)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -43,160 +41,169 @@ export function PostCard({ post, compact, showFullContent }: PostCardProps) {
   const toggleLike = useMutation(api.likes.togglePostLike)
   const deletePost = useMutation(api.posts.deletePost)
 
-  const content = showFullContent ? post.content : truncate(post.content, 300)
+  const isOwner = currentUserId && post.authorProfile &&
+    // We don't have userId on profile directly, but we can check via context
+    false // placeholder — will be derived from parent
+
+  const content = showFullContent ? post.content : truncate(post.content, 280)
   const category = post.type === 'confession' && post.category ? getCategoryInfo(post.category) : null
-  const stripeColor = category ? CATEGORY_COLORS[category.id] : null
-  const profile = post.authorProfile
 
   async function handleLike(e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
     const prev = liked
     setLiked(!liked)
-    setLikeCount(c => liked ? c - 1 : c + 1)
-    try { await toggleLike({ postId: post._id }) } catch {
+    setLikeCount((c) => (liked ? c - 1 : c + 1))
+    try {
+      await toggleLike({ postId: post._id })
+    } catch {
       setLiked(prev)
       setLikeCount(post.likeCount)
       toast.error('Failed to like')
     }
   }
 
-  function handleShare(e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation(); setMenuOpen(false)
-    navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`)
-      .then(() => toast.success('Link copied'))
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setMenuOpen(false)
+    try {
+      await deletePost({ postId: post._id })
+      toast.success('Post deleted')
+    } catch {
+      toast.error('Failed to delete')
+    }
   }
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation(); setMenuOpen(false)
-    try { await deletePost({ postId: post._id }); toast.success('Deleted') } catch { toast.error('Failed') }
+  function handleShare(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = `${window.location.origin}/post/${post._id}`
+    navigator.clipboard.writeText(url).then(() => toast.success('Link copied!'))
+    setMenuOpen(false)
   }
+
+  const profile = post.authorProfile
 
   return (
-    <Link to={`/post/${post._id}`} className="block group">
-      <article
-        className={cn(
-          'card-interactive relative overflow-hidden',
-          compact ? 'p-4' : 'p-5'
-        )}
-      >
-        {/* Confession accent stripe */}
-        {stripeColor && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[7px]"
-            style={{ background: stripeColor }}
-          />
-        )}
-
-        <div className={cn(stripeColor && 'pl-3')}>
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {profile ? (
-                <Avatar
-                  username={profile.username}
-                  avatarSeed={profile.avatarSeed}
-                  avatarEmoji={profile.avatarEmoji}
-                  size={compact ? 'xs' : 'sm'}
-                />
-              ) : (
-                <div className={cn('rounded-lg bg-surface-raised border border-line shrink-0', compact ? 'w-6 h-6' : 'w-8 h-8')} />
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-sm font-500 text-ink leading-none">
-                    @{profile?.username ?? 'anon'}
+    <Link to={`/post/${post._id}`} className="block">
+      <div className={cn('card-hover p-5 group', compact && 'p-4')}>
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {profile ? (
+              <Avatar
+                username={profile.username}
+                avatarSeed={profile.avatarSeed}
+                avatarEmoji={profile.avatarEmoji}
+                size={compact ? 'sm' : 'md'}
+              />
+            ) : (
+              <div className={cn(
+                'rounded-full bg-bg-elevated border border-border shrink-0',
+                compact ? 'w-8 h-8' : 'w-10 h-10'
+              )} />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-ink-primary">
+                  {profile ? `@${profile.username}` : '@anonymous'}
+                </span>
+                {category && (
+                  <span className={cn('badge text-xs', category.color)}>
+                    {category.emoji} {category.label}
                   </span>
-                  {category && (
-                    <span className="badge badge-subtle text-[10px] gap-1">
-                      <span>{category.emoji}</span>
-                      {category.label}
-                    </span>
-                  )}
-                </div>
-                <span className="t-meta text-xs mt-0.5 block">{timeAgo(post.createdAt)}</span>
-              </div>
-            </div>
-
-            {/* Menu */}
-            <div className="relative shrink-0" onClick={e => e.preventDefault()}>
-              <button
-                className={cn(
-                  'w-7 h-7 flex items-center justify-center rounded-md text-ink-disabled',
-                  'hover:bg-surface-raised hover:text-ink-secondary transition-all',
-                  'opacity-0 group-hover:opacity-100'
                 )}
-                onClick={e => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-              >
-                <MoreHorizontal size={15} />
-              </button>
-
-              {menuOpen && (
-                <div
-                  className="absolute right-0 top-8 z-20 py-1 min-w-[9rem] rounded-lg border border-line bg-surface-raised shadow-lg animate-scale-in"
-                  onMouseLeave={() => setMenuOpen(false)}
-                >
-                  <button onClick={handleShare}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-ink-secondary hover:bg-surface-overlay hover:text-ink transition-colors">
-                    <Share2 size={13} /> Copy link
-                  </button>
-                  <button onClick={handleDelete}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-fg hover:bg-rose/8 transition-colors">
-                    <Trash2 size={13} /> Delete
-                  </button>
-                </div>
-              )}
+              </div>
+              <span className="text-xs text-ink-muted">{timeAgo(post.createdAt)}</span>
             </div>
           </div>
 
-          {/* Content */}
-          <p className={cn(
-            'text-ink leading-[1.65] whitespace-pre-wrap break-words mb-3',
-            compact ? 'text-sm line-clamp-3' : 'text-base'
-          )}>
-            {content}
-          </p>
-
-          {/* Tags */}
-          {!compact && post.tags && post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {post.tags.map((tag: string) => (
-                <span key={tag} className="tag text-xs"># {tag}</span>
-              ))}
-            </div>
-          )}
-
-          {/* Divider */}
-          <div className="divider mb-3" />
-
-          {/* Action bar */}
-          <div className="flex items-center gap-0.5" onClick={e => e.preventDefault()}>
+          {/* Menu */}
+          <div className="relative" onClick={(e) => e.preventDefault()}>
             <button
-              onClick={handleLike}
-              className={cn('reaction-btn gap-1.5', liked && 'reaction-btn-active-rose')}
+              className="btn-ghost w-8 h-8 p-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(!menuOpen) }}
             >
-              <Heart size={14} className={cn('transition-transform duration-100', liked && 'fill-current scale-110')} />
-              <span className="font-mono text-xs">{formatCount(likeCount)}</span>
+              <MoreHorizontal size={16} />
             </button>
-
-            <Link
-              to={`/post/${post._id}`}
-              className="reaction-btn gap-1.5"
-              onClick={e => e.stopPropagation()}
-            >
-              <MessageCircle size={14} />
-              <span className="font-mono text-xs">{formatCount(post.commentCount)}</span>
-            </Link>
-
-            <button
-              onClick={handleShare}
-              className="reaction-btn ml-auto"
-              title="Copy link"
-            >
-              <Share2 size={13} />
-            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-9 z-20 bg-bg-surface border border-border rounded-xl shadow-modal py-1 min-w-36 animate-scale-in"
+                   onMouseLeave={() => setMenuOpen(false)}>
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-elevated transition-colors"
+                >
+                  <Share2 size={14} /> Copy link
+                </button>
+                {isOwner && (
+                  <>
+                    <Link
+                      to={`/post/${post._id}/edit`}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-elevated transition-colors"
+                    >
+                      <Edit2 size={14} /> Edit
+                    </Link>
+                    <button
+                      onClick={handleDelete}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      <Trash2 size={14} /> Delete
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </article>
+
+        {/* Content */}
+        <div className={cn('post-content mb-4', compact ? 'text-sm' : 'text-[0.9375rem]')}>
+          {content}
+        </div>
+
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && !compact && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {post.tags.map((tag) => (
+              <span key={tag} className="tag">#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+          <button
+            onClick={handleLike}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150',
+              liked
+                ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated'
+            )}
+          >
+            <Heart
+              size={15}
+              className={cn('transition-transform', liked && 'fill-current scale-110')}
+            />
+            <span>{formatCount(likeCount)}</span>
+          </button>
+
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated transition-colors"
+          >
+            <MessageCircle size={15} />
+            <span>{formatCount(post.commentCount)}</span>
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated transition-colors ml-auto"
+          >
+            <Share2 size={14} />
+          </button>
+        </div>
+      </div>
     </Link>
   )
 }

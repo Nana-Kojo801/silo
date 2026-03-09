@@ -5,16 +5,20 @@ import { Modal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/Avatar'
 import { cn, CONFESSION_CATEGORIES } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { Hash } from 'lucide-react'
+import { Hash, ChevronDown } from 'lucide-react'
 
-interface Props {
+interface CreatePostModalProps {
   open: boolean
   onClose: () => void
   type?: 'post' | 'confession'
-  profile: { username: string; avatarSeed: string; avatarEmoji?: string }
+  profile: {
+    username: string
+    avatarSeed: string
+    avatarEmoji?: string
+  }
 }
 
-export function CreatePostModal({ open, onClose, type: defaultType = 'post', profile }: Props) {
+export function CreatePostModal({ open, onClose, type: defaultType = 'post', profile }: CreatePostModalProps) {
   const [content, setContent] = useState('')
   const [type, setType] = useState<'post' | 'confession'>(defaultType)
   const [category, setCategory] = useState('')
@@ -22,22 +26,41 @@ export function CreatePostModal({ open, onClose, type: defaultType = 'post', pro
   const [loading, setLoading] = useState(false)
 
   const createPost = useMutation(api.posts.createPost)
-  const max = 2000
-  const remaining = max - content.length
-  const over = remaining < 0
 
-  async function submit(e: React.FormEvent) {
+  const maxLength = 2000
+  const remaining = maxLength - content.length
+  const isOverLimit = remaining < 0
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!content.trim() || loading || over) return
-    if (type === 'confession' && !category) return toast.error('Pick a category')
+    if (!content.trim() || loading || isOverLimit) return
+    if (type === 'confession' && !category) {
+      toast.error('Pick a category for your confession')
+      return
+    }
+
     setLoading(true)
     try {
-      const parsedTags = tags.split(/[,\s]+/).map(t => t.replace(/^#/, '').trim().toLowerCase()).filter(t => t.length > 0).slice(0, 5)
-      await createPost({ content: content.trim(), type, category: type === 'confession' ? category : undefined, tags: parsedTags })
-      toast.success(type === 'confession' ? 'Confession posted' : 'Posted!')
-      setContent(''); setCategory(''); setTags(''); onClose()
+      const parsedTags = tags
+        .split(/[,\s]+/)
+        .map((t) => t.replace(/^#/, '').trim().toLowerCase())
+        .filter((t) => t.length > 0)
+        .slice(0, 5)
+
+      await createPost({
+        content: content.trim(),
+        type,
+        category: type === 'confession' ? category : undefined,
+        tags: parsedTags,
+      })
+
+      toast.success(type === 'confession' ? 'Confession posted 🤫' : 'Post shared!')
+      setContent('')
+      setCategory('')
+      setTags('')
+      onClose()
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed')
+      toast.error(err instanceof Error ? err.message : 'Failed to post')
     } finally {
       setLoading(false)
     }
@@ -45,30 +68,45 @@ export function CreatePostModal({ open, onClose, type: defaultType = 'post', pro
 
   return (
     <Modal open={open} onClose={onClose} size="md">
-      <form onSubmit={submit} className="p-5 space-y-4">
-
-        {/* Type tabs */}
-        <div className="flex gap-1 p-0.5 bg-surface-subtle rounded-lg border border-line">
-          {(['post', 'confession'] as const).map(t => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t)}
-              className={cn(
-                'flex-1 py-1.5 rounded-md text-sm font-medium transition-all duration-100',
-                type === t ? 'bg-surface-raised text-ink shadow-sm' : 'text-ink-muted hover:text-ink-secondary'
-              )}
-            >
-              {t === 'post' ? 'Post' : '🤫 Confession'}
-            </button>
-          ))}
+      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Type toggle */}
+        <div className="flex gap-2 p-1 bg-bg-card rounded-xl border border-border">
+          <button
+            type="button"
+            onClick={() => setType('post')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150',
+              type === 'post'
+                ? 'bg-silo-500 text-white shadow-glow-xs'
+                : 'text-ink-secondary hover:text-ink-primary'
+            )}
+          >
+            Post
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('confession')}
+            className={cn(
+              'flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150',
+              type === 'confession'
+                ? 'bg-silo-500 text-white shadow-glow-xs'
+                : 'text-ink-secondary hover:text-ink-primary'
+            )}
+          >
+            Confession 🤫
+          </button>
         </div>
 
         {/* Author */}
-        <div className="flex items-center gap-2.5">
-          <Avatar username={profile.username} avatarSeed={profile.avatarSeed} avatarEmoji={profile.avatarEmoji} size="sm" />
+        <div className="flex items-center gap-3">
+          <Avatar
+            username={profile.username}
+            avatarSeed={profile.avatarSeed}
+            avatarEmoji={profile.avatarEmoji}
+            size="md"
+          />
           <div>
-            <p className="font-mono text-sm font-500 text-ink">@{profile.username}</p>
+            <span className="font-semibold text-sm text-ink-primary">@{profile.username}</span>
             <p className="text-xs text-ink-muted">posting anonymously</p>
           </div>
         </div>
@@ -77,38 +115,45 @@ export function CreatePostModal({ open, onClose, type: defaultType = 'post', pro
         <div className="relative">
           <textarea
             value={content}
-            onChange={e => setContent(e.target.value)}
-            placeholder={type === 'confession' ? "What's your confession? They'll never know…" : "What's on your mind?"}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={
+              type === 'confession'
+                ? "What's your confession? No one will know it's you..."
+                : "What's on your mind?"
+            }
             rows={5}
             autoFocus
-            className={cn('input text-base', over && 'border-rose focus:shadow-none')}
+            className={cn(
+              'input-base resize-none',
+              isOverLimit && 'border-rose-500 focus:border-rose-500'
+            )}
           />
-          <span className={cn(
-            'absolute bottom-2.5 right-3 font-mono text-xs',
-            remaining < 100 ? (over ? 'text-rose-fg' : 'text-amber-fg') : 'text-ink-disabled'
+          <div className={cn(
+            'absolute bottom-3 right-3 text-xs font-mono',
+            remaining < 50 ? 'text-rose-400' : 'text-ink-muted'
           )}>
             {remaining}
-          </span>
+          </div>
         </div>
 
-        {/* Category (confessions) */}
+        {/* Category (confessions only) */}
         {type === 'confession' && (
           <div>
-            <p className="t-label mb-2">Category *</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {CONFESSION_CATEGORIES.map(cat => (
+            <label className="section-label mb-2 block">Category *</label>
+            <div className="grid grid-cols-3 gap-2">
+              {CONFESSION_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => setCategory(cat.id)}
                   className={cn(
-                    'flex flex-col items-center gap-1 p-2.5 rounded-lg border text-xs font-medium transition-all',
+                    'flex flex-col items-center gap-1 p-3 rounded-xl border text-xs font-medium transition-all duration-150',
                     category === cat.id
-                      ? 'border-violet-600/60 bg-violet-600/10 text-ink'
-                      : 'border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink-secondary'
+                      ? 'border-silo-500 bg-silo-500/10 text-silo-300'
+                      : 'border-border bg-bg-card text-ink-secondary hover:border-border-strong hover:text-ink-primary'
                   )}
                 >
-                  <span className="text-lg leading-none">{cat.emoji}</span>
+                  <span className="text-lg">{cat.emoji}</span>
                   {cat.label}
                 </button>
               ))}
@@ -116,30 +161,38 @@ export function CreatePostModal({ open, onClose, type: defaultType = 'post', pro
           </div>
         )}
 
-        {/* Tags (posts) */}
+        {/* Tags (posts only) */}
         {type === 'post' && (
           <div className="relative">
-            <Hash size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-disabled pointer-events-none" />
+            <Hash size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input
               type="text"
               value={tags}
-              onChange={e => setTags(e.target.value)}
-              placeholder="tags, separated by commas"
-              className="input pl-8 text-sm py-2"
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="tags, separated by commas (optional)"
+              className="input-base pl-8 text-sm py-2.5"
             />
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-1 border-t border-line">
-          <button type="button" onClick={onClose} className="btn-ghost btn-sm">Cancel</button>
+        <div className="flex items-center justify-between pt-1">
+          <button type="button" onClick={onClose} className="btn-secondary text-sm">
+            Cancel
+          </button>
           <button
             type="submit"
-            disabled={!content.trim() || loading || over}
-            className="btn-primary btn-sm gap-2"
+            disabled={!content.trim() || loading || isOverLimit}
+            className="btn-primary"
           >
-            {loading ? <span className="spinner spinner-sm" /> : null}
-            {type === 'confession' ? 'Confess' : 'Post'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Posting...
+              </span>
+            ) : (
+              type === 'confession' ? 'Confess 🤫' : 'Post'
+            )}
           </button>
         </div>
       </form>

@@ -1,119 +1,126 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from 'convex/react'
-import { useAuthActions } from '@convex-dev/auth/react'
 import { api } from '../../../convex/_generated/api'
 import {
-  Flame, Compass, Bell, Settings, MessageSquareMore,
-  CircleHelp, LogOut, Plus, PenLine
+  Flame, Compass, Bell, User, Settings,
+  MessageSquareMore, CircleHelp, LogOut, Plus
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { cn } from '@/lib/utils'
+import { useAuthActions } from '@convex-dev/auth/react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import toast from 'react-hot-toast'
 
-interface SidebarProps { onCreatePost: () => void }
+interface SidebarProps {
+  onCreatePost?: () => void
+}
 
-const NAV = [
-  { icon: Flame,             label: 'Feed',          path: '/feed' },
-  { icon: MessageSquareMore, label: 'Confessions',   path: '/confessions' },
-  { icon: Compass,           label: 'Explore',       path: '/explore' },
-  { icon: CircleHelp,        label: 'Ask Me',        path: '/ask' },
-  { icon: Bell,              label: 'Notifications', path: '/notifications' },
+const NAV_ITEMS = [
+  { icon: Flame, label: 'Feed', path: '/feed' },
+  { icon: MessageSquareMore, label: 'Confessions', path: '/confessions' },
+  { icon: Compass, label: 'Explore', path: '/explore' },
+  { icon: CircleHelp, label: 'Ask Me', path: '/ask' },
+  { icon: Bell, label: 'Notifications', path: '/notifications' },
 ]
 
 export function Sidebar({ onCreatePost }: SidebarProps) {
   const location = useLocation()
   const { profile } = useCurrentUser()
   const { signOut } = useAuthActions()
-  const unread = useQuery(api.notifications.unreadCount) ?? 0
+  const unreadCount = useQuery(api.notifications.unreadCount) ?? 0
 
   async function handleSignOut() {
-    try { await signOut() } catch { toast.error('Sign out failed') }
+    try {
+      await signOut()
+      toast.success('Signed out')
+    } catch {
+      toast.error('Failed to sign out')
+    }
   }
 
-  const isActive = (path: string) => location.pathname.startsWith(path)
-
   return (
-    <aside className="hidden md:flex flex-col h-screen sticky top-0 w-56 lg:w-60 shrink-0 border-r border-line bg-[#0d0d0f]">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-line shrink-0">
-        <SiloMark />
-        <span className="font-display text-xl font-bold text-ink tracking-tight">silo</span>
-      </div>
+    <aside className="hidden md:flex flex-col w-64 xl:w-72 h-screen sticky top-0 pt-6 pb-4 px-3 shrink-0 border-r border-border/50">
+      {/* Logo */}
+      <Link to="/feed" className="flex items-center gap-2.5 px-3 mb-8 group">
+        <div className="w-8 h-8 rounded-xl bg-gradient-silo flex items-center justify-center shadow-glow-sm">
+          <span className="text-white font-black text-sm">S</span>
+        </div>
+        <span className="text-xl font-black text-ink-primary group-hover:text-glow transition-all">
+          silo
+        </span>
+      </Link>
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto no-scrollbar">
-        {NAV.map(({ icon: Icon, label, path }) => {
-          const active = isActive(path)
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1">
+        {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
+          const active = location.pathname.startsWith(path)
           const isNotif = path === '/notifications'
           return (
-            <Link key={path} to={path} className={cn('nav-link', active && 'nav-link-active')}>
-              <Icon size={16} strokeWidth={active ? 2.5 : 2} className="shrink-0" />
-              <span className="flex-1 font-medium">{label}</span>
-              {isNotif && unread > 0 && (
-                <span className="flex items-center justify-center min-w-[1.125rem] h-[1.125rem] rounded-full text-[10px] font-bold bg-rose text-white px-1 shrink-0">
-                  {unread > 99 ? '99+' : unread}
+            <Link key={path} to={path} className={cn(active ? 'nav-item-active' : 'nav-item')}>
+              <div className="relative shrink-0">
+                <Icon size={18} />
+                {isNotif && unreadCount > 0 && <span className="notif-dot" />}
+              </div>
+              <span>{label}</span>
+              {isNotif && unreadCount > 0 && (
+                <span className="ml-auto badge-rose text-xs px-1.5 py-0.5">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </Link>
           )
         })}
-
-        <div className="divider !my-3 mx-1" />
-
-        <Link to="/settings" className={cn('nav-link', isActive('/settings') && 'nav-link-active')}>
-          <Settings size={16} strokeWidth={2} className="shrink-0" />
-          <span className="font-medium">Settings</span>
-        </Link>
       </nav>
 
-      {/* Compose CTA */}
-      <div className="px-2 pb-3">
-        <button onClick={onCreatePost} className="btn-primary w-full justify-center gap-2 py-2.5 text-sm">
-          <Plus size={15} />
+      {/* Create post button */}
+      <div className="px-0 mb-4">
+        <button
+          onClick={onCreatePost}
+          className="btn-primary w-full justify-center text-sm font-semibold"
+        >
+          <Plus size={16} />
           New Post
         </button>
       </div>
 
-      {/* Profile strip */}
-      {profile && (
-        <div className="border-t border-line px-2 py-2 shrink-0">
+      {/* Divider */}
+      <div className="divider mb-4" />
+
+      {/* Profile + Settings */}
+      <div className="space-y-1">
+        {profile && (
           <Link
             to={`/profile/${profile.username}`}
-            className={cn('nav-link', isActive(`/profile/${profile.username}`) && 'nav-link-active')}
+            className={cn(
+              location.pathname === `/profile/${profile.username}` ? 'nav-item-active' : 'nav-item'
+            )}
           >
             <Avatar
               username={profile.username}
               avatarSeed={profile.avatarSeed}
               avatarEmoji={profile.avatarEmoji}
-              size="xs"
-              className="shrink-0"
+              size="sm"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">@{profile.username}</p>
+              <span className="text-sm truncate block">@{profile.username}</span>
             </div>
-            <PenLine size={12} className="shrink-0 opacity-40" />
+            <User size={14} className="shrink-0 opacity-40" />
           </Link>
-          <button
-            onClick={handleSignOut}
-            className="nav-link w-full text-left mt-0.5 hover:!text-rose-DEFAULT hover:!bg-rose-DEFAULT/5"
-          >
-            <LogOut size={15} className="shrink-0" />
-            <span className="font-medium">Sign out</span>
-          </button>
-        </div>
-      )}
-    </aside>
-  )
-}
+        )}
 
-function SiloMark() {
-  return (
-    <div
-      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 violet-glow"
-      style={{ background: 'linear-gradient(145deg, #7C3AED 0%, #5B21B6 100%)' }}
-    >
-      <span className="font-display font-bold text-white text-sm leading-none">S</span>
-    </div>
+        <Link
+          to="/settings"
+          className={cn(location.pathname === '/settings' ? 'nav-item-active' : 'nav-item')}
+        >
+          <Settings size={18} />
+          <span>Settings</span>
+        </Link>
+
+        <button onClick={handleSignOut} className="nav-item w-full text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10">
+          <LogOut size={18} />
+          <span>Sign out</span>
+        </button>
+      </div>
+    </aside>
   )
 }

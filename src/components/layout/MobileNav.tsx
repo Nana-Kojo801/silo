@@ -5,26 +5,25 @@ import { Flame, Compass, Bell, User, MessageSquareMore } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-const NAV = [
-  { icon: Flame,             label: 'Feed',     path: '/feed' },
-  { icon: MessageSquareMore, label: 'Confess',  path: '/confessions' },
-  { icon: Compass,           label: 'Explore',  path: '/explore' },
-  { icon: Bell,              label: 'Alerts',   path: '/notifications' },
-  { icon: User,              label: 'Profile',  path: '/profile' },
+const NAV_ITEMS = [
+  { icon: Flame, label: 'Feed', path: '/feed' },
+  { icon: MessageSquareMore, label: 'Confess', path: '/confessions' },
+  { icon: Compass, label: 'Explore', path: '/explore' },
+  { icon: Bell, label: 'Notifs', path: '/notifications' },
+  { icon: User, label: 'Profile', path: '/profile' },
 ]
 
 export function MobileNav() {
   const location = useLocation()
   const { profile } = useCurrentUser()
-  const unread = useQuery(api.notifications.unreadCount) ?? 0
+  const unreadCount = useQuery(api.notifications.unreadCount) ?? 0
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-line"
-         style={{ background: 'rgba(9,9,11,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
-      <div className="flex items-center justify-around h-[3.75rem] max-w-lg mx-auto px-1 safe-area-bottom">
-        {NAV.map(({ icon: Icon, label, path }) => {
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg-surface/95 backdrop-blur-lg border-t border-border">
+      <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+        {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
           const isProfile = path === '/profile'
-          const to = isProfile && profile ? `/profile/${profile.username}` : path
+          const resolvedPath = isProfile && profile ? `/profile/${profile.username}` : path
           const active = isProfile
             ? location.pathname.startsWith('/profile')
             : location.pathname.startsWith(path)
@@ -33,26 +32,21 @@ export function MobileNav() {
           return (
             <Link
               key={path}
-              to={to}
-              className="relative flex flex-col items-center justify-center gap-1 w-14 h-full"
+              to={resolvedPath}
+              className={cn(
+                'flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl min-w-0 transition-all duration-150',
+                active ? 'text-silo-400' : 'text-ink-muted'
+              )}
             >
-              <div className={cn(
-                'flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150',
-                active ? 'bg-violet-600/12 text-ink' : 'text-ink-muted'
-              )}>
-                <Icon
-                  size={20}
-                  strokeWidth={active ? 2.5 : 1.75}
-                  className={cn('transition-transform duration-150', active && 'scale-105')}
-                />
-                {isNotif && unread > 0 && (
-                  <span className="absolute top-1 right-1.5 w-2 h-2 bg-rose rounded-full border border-[#09090B]" />
+              <div className="relative">
+                <Icon size={21} strokeWidth={active ? 2.5 : 2} />
+                {isNotif && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
                 )}
               </div>
-              <span className={cn(
-                'text-[10px] font-medium leading-none transition-colors',
-                active ? 'text-ink' : 'text-ink-disabled'
-              )}>
+              <span className={cn('text-[10px] font-medium', active ? 'font-semibold' : '')}>
                 {label}
               </span>
             </Link>

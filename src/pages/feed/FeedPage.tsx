@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { PostCard } from '@/components/shared/PostCard'
@@ -6,7 +6,7 @@ import { CreatePostModal } from '@/components/shared/CreatePostModal'
 import { FeedSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { Plus, Flame, Clock } from 'lucide-react'
+import { Plus, TrendingUp, Flame, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type FeedTab = 'latest' | 'trending'
@@ -27,23 +27,25 @@ export function FeedPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="t-heading">Feed</h1>
-          <p className="t-meta mt-0.5">What's happening right now</p>
+          <h1 className="page-header">
+            {tab === 'latest' ? '✦ Feed' : '🔥 Trending'}
+          </h1>
+          <p className="text-sm text-ink-muted mt-0.5">What's going on right now</p>
         </div>
         {profile && (
-          <button onClick={() => setCreateOpen(true)} className="btn-primary btn-sm">
-            <Plus size={14} />
+          <button onClick={() => setCreateOpen(true)} className="btn-primary text-sm">
+            <Plus size={16} />
             Post
           </button>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0.5 p-1 bg-surface border border-line rounded-lg w-fit">
-        <TabButton active={tab === 'latest'} onClick={() => setTab('latest')} icon={<Clock size={13} />}>
+      <div className="flex gap-1 p-1 bg-bg-card border border-border rounded-xl w-fit">
+        <TabButton active={tab === 'latest'} onClick={() => setTab('latest')} icon={<Clock size={14} />}>
           Latest
         </TabButton>
-        <TabButton active={tab === 'trending'} onClick={() => setTab('trending')} icon={<Flame size={13} />}>
+        <TabButton active={tab === 'trending'} onClick={() => setTab('trending')} icon={<Flame size={14} />}>
           Trending
         </TabButton>
       </div>
@@ -52,18 +54,18 @@ export function FeedPage() {
       {profile && tab === 'latest' && (
         <button
           onClick={() => setCreateOpen(true)}
-          className="card-interactive w-full p-4 flex items-center gap-3 text-left group"
+          className="card w-full p-4 flex items-center gap-3 hover:border-border-strong transition-all text-left group"
         >
           <div
-            className="w-8 h-8 rounded-md shrink-0 flex items-center justify-center font-bold text-xs text-white font-display"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)' }}
+            className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center font-bold text-sm text-white"
+            style={{ background: `linear-gradient(135deg, #7c4dff, #f94d6a)` }}
           >
             {profile.avatarEmoji || profile.username.slice(0, 2).toUpperCase()}
           </div>
-          <span className="t-meta text-sm group-hover:text-ink-secondary transition-colors flex-1 text-left">
+          <span className="text-ink-muted text-sm group-hover:text-ink-secondary transition-colors flex-1">
             Share something anonymously...
           </span>
-          <Plus size={14} className="text-ink-disabled shrink-0" />
+          <Plus size={16} className="text-ink-muted shrink-0" />
         </button>
       )}
 
@@ -78,16 +80,20 @@ export function FeedPage() {
           action={
             profile ? (
               <button onClick={() => setCreateOpen(true)} className="btn-primary">
-                <Plus size={15} />
+                <Plus size={16} />
                 Create First Post
               </button>
             ) : null
           }
         />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {posts.map((post) => (
-            <PostCard key={post._id} post={post} currentUserId={user?._id} />
+            <PostCard
+              key={post._id}
+              post={post}
+              currentUserId={user?._id}
+            />
           ))}
         </div>
       )}
@@ -118,10 +124,10 @@ function TabButton({
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 px-3.5 py-1.5 rounded text-sm font-medium transition-all duration-120',
+        'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150',
         active
-          ? 'bg-violet-600 text-white shadow-sm'
-          : 'text-ink-muted hover:text-ink'
+          ? 'bg-silo-500 text-white shadow-glow-xs'
+          : 'text-ink-secondary hover:text-ink-primary'
       )}
     >
       {icon}

@@ -95,14 +95,16 @@ export function PostPage() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-up">
+    <div className="space-y-5 animate-fade-up">
+      {/* Back */}
       <button onClick={() => navigate(-1)} className="btn-ghost -ml-2">
-        <ArrowLeft size={15} />
+        <ArrowLeft size={16} />
         Back
       </button>
 
-      {/* Post body */}
-      <div className="card p-5">
+      {/* Post */}
+      <div className="card p-6">
+        {/* Author */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             {post.authorProfile ? (
@@ -113,19 +115,19 @@ export function PostPage() {
                 size="lg"
               />
             ) : (
-              <div className="w-11 h-11 rounded-xl bg-surface-raised border border-line" />
+              <div className="w-12 h-12 rounded-full bg-bg-elevated border border-border" />
             )}
             <div>
               <Link
                 to={`/profile/${post.authorProfile?.username}`}
-                className="t-mono text-sm font-semibold text-ink hover:text-violet-400 transition-colors"
+                className="font-semibold text-ink-primary hover:text-silo-300 transition-colors"
               >
                 @{post.authorProfile?.username ?? 'anonymous'}
               </Link>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="t-meta">{timeAgo(post.createdAt)}</span>
+                <span className="text-xs text-ink-muted">{timeAgo(post.createdAt)}</span>
                 {category && (
-                  <span className={cn('badge', category.color)}>
+                  <span className={cn('badge text-xs', category.color)}>
                     {category.emoji} {category.label}
                   </span>
                 )}
@@ -134,43 +136,49 @@ export function PostPage() {
           </div>
 
           {isOwner && (
-            <button onClick={handleDelete} className="btn-danger btn-sm">
+            <button onClick={handleDelete} className="btn-danger text-xs px-3 py-1.5">
               <Trash2 size={13} />
               Delete
             </button>
           )}
         </div>
 
-        <p className="t-body leading-7 mb-4 whitespace-pre-wrap">{post.content}</p>
+        {/* Content */}
+        <div className="post-content text-base leading-7 mb-5">{post.content}</div>
 
+        {/* Tags */}
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div className="flex flex-wrap gap-1.5 mb-5">
             {post.tags.map((tag: string) => (
               <span key={tag} className="tag">#{tag}</span>
             ))}
           </div>
         )}
 
+        {/* Divider */}
         <div className="divider mb-4" />
 
+        {/* Actions */}
         <div className="flex items-center gap-1">
           <button
             onClick={handleLike}
             className={cn(
-              'reaction-btn',
-              liked && 'text-rose-fg bg-rose-DEFAULT/10 border-rose-DEFAULT/20'
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+              liked
+                ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated'
             )}
           >
-            <Heart size={14} className={cn(liked && 'fill-current')} />
+            <Heart size={15} className={cn(liked && 'fill-current')} />
             <span>{formatCount(likeCount)}</span>
           </button>
 
-          <div className="reaction-btn cursor-default">
-            <MessageCircle size={14} />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-ink-muted">
+            <MessageCircle size={15} />
             <span>{formatCount(post.commentCount)}</span>
           </div>
 
-          <button onClick={handleShare} className="reaction-btn ml-auto">
+          <button onClick={handleShare} className="btn-ghost ml-auto text-ink-muted">
             <Share2 size={14} />
             Share
           </button>
@@ -178,15 +186,15 @@ export function PostPage() {
       </div>
 
       {/* Comment input */}
-      {profile && (
+      {profile ? (
         <div className="card p-4">
           {replyingTo && (
-            <div className="flex items-center justify-between mb-2.5 t-meta text-xs">
+            <div className="flex items-center justify-between mb-2 text-xs text-ink-muted">
               <span className="flex items-center gap-1.5">
                 <CornerDownRight size={12} />
                 Replying to @{replyingTo.username}
               </span>
-              <button onClick={() => setReplyingTo(null)} className="hover:text-ink-secondary transition-colors">
+              <button onClick={() => setReplyingTo(null)} className="hover:text-ink-secondary">
                 Cancel
               </button>
             </div>
@@ -209,26 +217,49 @@ export function PostPage() {
                 t.style.height = 'auto'
                 t.style.height = t.scrollHeight + 'px'
               }}
-              className="input resize-none min-h-[2.5rem] py-2 text-sm flex-1"
+              className="input-base resize-none min-h-[2.75rem] py-2.5 text-sm flex-1"
             />
             <button
               type="submit"
               disabled={!commentText.trim() || submitting}
-              className="btn-primary px-3 py-2 mb-0.5 shrink-0"
+              className="btn-primary px-3 py-2.5 mb-0.5 shrink-0"
             >
-              {submitting ? <span className="spinner spinner-sm" /> : <Send size={14} />}
+              {submitting ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={15} />
+              )}
             </button>
           </form>
         </div>
-      )}
+      ) : null}
 
       {/* Comments */}
-      <div className="space-y-2">
-        <h3 className="t-label mb-3">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-ink-secondary mb-3">
           {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
         </h3>
-        {comments.length === 0 ? (
-          <EmptyState icon="💬" title="No comments yet" description="Start the conversation" className="py-8" />
+        {comments === undefined ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="card p-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-bg-elevated shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-bg-elevated rounded w-24" />
+                    <div className="h-4 bg-bg-elevated rounded w-full" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : comments.length === 0 ? (
+          <EmptyState
+            icon="💬"
+            title="No comments yet"
+            description="Start the conversation"
+            className="py-8"
+          />
         ) : (
           <div className="space-y-2">
             {comments.map((comment) => (
@@ -280,6 +311,7 @@ function CommentItem({
     showReplies ? { parentId: comment._id } : 'skip'
   )
   const toggleCommentLike = useMutation(api.likes.toggleCommentLike)
+  const deleteComment = useMutation(api.comments.remove)
 
   async function handleLike() {
     const prev = liked
@@ -294,7 +326,7 @@ function CommentItem({
   }
 
   return (
-    <div className={cn('card p-4', depth > 0 && 'ml-8')}>
+    <div className={cn('card p-4', depth > 0 && 'ml-8 border-border/50')}>
       <div className="flex gap-3">
         {comment.authorProfile ? (
           <Avatar
@@ -305,24 +337,25 @@ function CommentItem({
             className="shrink-0"
           />
         ) : (
-          <div className="w-8 h-8 rounded-md bg-surface-raised shrink-0" />
+          <div className="w-8 h-8 rounded-full bg-bg-elevated shrink-0" />
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="t-mono text-xs font-semibold text-ink">
+            <span className="text-sm font-semibold text-ink-primary">
               @{comment.authorProfile?.username ?? 'anonymous'}
             </span>
-            <span className="t-meta text-xs">{timeAgo(comment.createdAt)}</span>
+            <span className="text-xs text-ink-muted">{timeAgo(comment.createdAt)}</span>
           </div>
-          <p className="text-sm text-ink leading-relaxed">{comment.content}</p>
+          <p className="text-sm text-ink-primary leading-relaxed">{comment.content}</p>
 
-          <div className="flex items-center gap-0.5 mt-2">
+          {/* Comment actions */}
+          <div className="flex items-center gap-1 mt-2">
             <button
               onClick={handleLike}
               className={cn(
-                'reaction-btn text-xs',
-                liked && 'text-rose-fg bg-rose-DEFAULT/10 border-rose-DEFAULT/20'
+                'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all',
+                liked ? 'text-rose-400 bg-rose-500/10' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated'
               )}
             >
               <Heart size={12} className={cn(liked && 'fill-current')} />
@@ -332,7 +365,7 @@ function CommentItem({
             {depth === 0 && (
               <button
                 onClick={() => onReply(comment._id, comment.authorProfile?.username ?? 'anonymous')}
-                className="reaction-btn text-xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated transition-colors"
               >
                 <CornerDownRight size={12} />
                 Reply
@@ -342,7 +375,7 @@ function CommentItem({
             {comment.replyCount > 0 && depth === 0 && (
               <button
                 onClick={() => setShowReplies(!showReplies)}
-                className="reaction-btn text-xs ml-1"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-ink-muted hover:text-ink-secondary hover:bg-bg-elevated transition-colors ml-1"
               >
                 <ChevronDown size={12} className={cn('transition-transform', showReplies && 'rotate-180')} />
                 {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
@@ -350,10 +383,11 @@ function CommentItem({
             )}
           </div>
 
+          {/* Replies */}
           {showReplies && depth === 0 && (
             <div className="mt-3 space-y-2">
               {replies === undefined ? (
-                <p className="t-meta text-xs">Loading...</p>
+                <div className="text-xs text-ink-muted">Loading...</div>
               ) : (
                 replies.map((reply) => (
                   <CommentItem
