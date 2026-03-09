@@ -12,11 +12,11 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <div className={cn('flex flex-col items-center justify-center py-16 px-6 text-center', className)}>
       {icon && (
-        <div className="text-5xl mb-4 opacity-60">{icon}</div>
+        <div className="text-4xl mb-4" style={{ opacity: 0.4 }}>{icon}</div>
       )}
-      <h3 className="text-lg font-semibold text-ink-secondary mb-2">{title}</h3>
+      <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-2)' }}>{title}</h3>
       {description && (
-        <p className="text-sm text-ink-muted max-w-xs leading-relaxed mb-6">{description}</p>
+        <p className="text-sm max-w-xs leading-relaxed mb-5" style={{ color: 'var(--text-3)' }}>{description}</p>
       )}
       {action && <div>{action}</div>}
     </div>

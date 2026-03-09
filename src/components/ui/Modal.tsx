@@ -15,70 +15,54 @@ export function Modal({ open, onClose, title, children, size = 'md', className }
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (open) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [open])
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     if (open) document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, onClose])
 
   if (!open) return null
 
-  const sizeClass = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-  }[size]
+  const sizeClass = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl' }[size]
 
   return (
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
+      onClick={e => { if (e.target === overlayRef.current) onClose() }}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" />
+      <div className="absolute inset-0 animate-fade-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
 
-      {/* Panel */}
       <div
-        className={cn(
-          'relative w-full rounded-2xl shadow-modal animate-scale-in z-10',
-          'bg-bg-surface border border-border',
-          'max-h-[90dvh] flex flex-col',
-          sizeClass,
-          className
-        )}
+        className={cn('modal-panel relative w-full max-h-[90dvh] flex flex-col animate-scale-in z-10', sizeClass, className)}
       >
-        {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-            <h2 className="text-lg font-semibold text-ink-primary">{title}</h2>
+          <div
+            className="flex items-center justify-between px-5 py-4 border-b shrink-0"
+            style={{ borderColor: 'var(--border-1)' }}
+          >
+            <h2 className="text-base font-semibold" style={{ color: 'var(--text-1)' }}>{title}</h2>
             <button
               onClick={onClose}
-              className="btn-ghost w-8 h-8 p-0 rounded-lg text-ink-muted hover:text-ink-primary"
+              className="btn btn-ghost w-8 h-8 p-0 rounded"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {!title && (
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 btn-ghost w-8 h-8 p-0 rounded-lg text-ink-muted hover:text-ink-primary z-10"
+              className="btn btn-ghost absolute top-4 right-4 w-8 h-8 p-0 rounded z-10"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           )}
           {children}

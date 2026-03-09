@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, ArrowRight, Lock, Mail } from 'lucide-react'
 
@@ -15,26 +14,20 @@ export function AuthPage() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true)
-    try {
-      await signIn('google')
-    } catch (err) {
-      toast.error('Google sign in failed')
-      setGoogleLoading(false)
-    }
+    try { await signIn('google') }
+    catch { toast.error('Google sign in failed'); setGoogleLoading(false) }
   }
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !password) return
-
     setLoading(true)
     try {
       if (mode === 'signup') {
         await signIn('password', { email, password, flow: 'signUp' })
-        toast.success('Account created!')
+        toast.success('Account created')
       } else {
         await signIn('password', { email, password, flow: 'signIn' })
-        toast.success('Welcome back!')
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Authentication failed'
@@ -45,53 +38,45 @@ export function AuthPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-silo-700/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-700/15 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-silo-600/10 rounded-full blur-3xl" />
-      </div>
-
-      <div className="w-full max-w-md relative animate-fade-up">
+    <div
+      className="min-h-dvh flex flex-col items-center justify-center px-4"
+      style={{ background: 'var(--surface-base)' }}
+    >
+      <div className="w-full max-w-sm animate-fade-in">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-silo flex items-center justify-center shadow-glow mb-4">
-            <span className="text-white font-black text-2xl">S</span>
+        <div className="flex flex-col items-center mb-8">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg mb-3"
+            style={{ background: 'var(--accent)' }}
+          >
+            S
           </div>
-          <h1 className="text-3xl font-black text-ink-primary tracking-tight">silo</h1>
-          <p className="text-ink-muted text-sm mt-1.5 text-balance text-center">
-            anonymous thoughts. real conversations.
-          </p>
+          <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'var(--text-1)' }}>Silo</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Anonymous thoughts. Real conversations.</p>
         </div>
 
-        <div className="card p-8 space-y-6">
-          {/* Tab toggle */}
-          <div className="flex gap-2 p-1 bg-bg-card rounded-xl border border-border">
-            {(['signin', 'signup'] as const).map((m) => (
+        <div className="panel p-6 space-y-5">
+          {/* Mode toggle */}
+          <div className="segment-control">
+            {(['signin', 'signup'] as const).map(m => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={cn(
-                  'flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150',
-                  mode === m
-                    ? 'bg-silo-500 text-white shadow-glow-xs'
-                    : 'text-ink-secondary hover:text-ink-primary'
-                )}
+                className={`segment-btn${mode === m ? ' segment-btn-active' : ''}`}
               >
-                {m === 'signin' ? 'Sign In' : 'Create Account'}
+                {m === 'signin' ? 'Sign in' : 'Create account'}
               </button>
             ))}
           </div>
 
-          {/* Google OAuth */}
+          {/* Google */}
           <button
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
-            className="btn-secondary w-full justify-center gap-3 text-sm"
+            className="btn btn-secondary w-full justify-center gap-2.5 text-sm"
           >
             {googleLoading ? (
-              <span className="w-4 h-4 border-2 border-border border-t-ink-secondary rounded-full animate-spin" />
+              <span className="spinner" />
             ) : (
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -103,69 +88,62 @@ export function AuthPage() {
             Continue with Google
           </button>
 
-          {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="divider flex-1" />
-            <span className="text-xs text-ink-muted">or</span>
-            <div className="divider flex-1" />
+            <div className="flex-1 h-px" style={{ background: 'var(--border-2)' }} />
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>or</span>
+            <div className="flex-1 h-px" style={{ background: 'var(--border-2)' }} />
           </div>
 
-          {/* Email/password form */}
-          <form onSubmit={handleEmailAuth} className="space-y-4">
+          {/* Email form */}
+          <form onSubmit={handleEmailAuth} className="space-y-3">
             <div className="relative">
-              <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+              <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="Email address"
                 required
                 autoComplete="email"
-                className="input-base pl-10"
+                className="input w-full pl-9"
               />
             </div>
-
             <div className="relative">
-              <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+              <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="Password"
                 required
                 minLength={8}
                 autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                className="input-base pl-10 pr-11"
+                className="input w-full pl-9 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: 'var(--text-3)' }}
               >
-                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
-
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="btn-primary w-full justify-center"
+              className="btn btn-primary w-full justify-center"
             >
-              {loading ? (
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  {mode === 'signin' ? 'Sign in' : 'Create account'}
-                  <ArrowRight size={16} />
-                </>
+              {loading ? <span className="spinner" /> : (
+                <>{mode === 'signin' ? 'Sign in' : 'Create account'} <ArrowRight size={15} /></>
               )}
             </button>
           </form>
-
-          <p className="text-xs text-ink-muted text-center">
-            By continuing, you agree to keep the vibe respectful. 🙏
-          </p>
         </div>
+
+        <p className="text-xs text-center mt-4" style={{ color: 'var(--text-4)' }}>
+          Your real identity is never visible to others.
+        </p>
       </div>
     </div>
   )

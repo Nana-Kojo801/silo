@@ -2,37 +2,40 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { Avatar } from '@/components/ui/Avatar'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useNavigate } from 'react-router-dom'
+import { useTheme } from '@/contexts/ThemeContext'
 import toast from 'react-hot-toast'
-import { cn, getAvatarGradient } from '@/lib/utils'
-import { LogOut, User, Shield, PenLine, Check, X } from 'lucide-react'
+import { LogOut, User, Shield, Palette, Check, X } from 'lucide-react'
 
 const AVATAR_EMOJIS = ['', '👻', '🦊', '🐺', '🐉', '🦅', '🦋', '🌙', '⭐', '🔥', '💎', '🎭', '🌊', '🌸', '🍄', '🦄', '🎯']
+
+type Section = 'profile' | 'appearance' | 'account'
+
+const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
+  { id: 'profile', label: 'Profile', icon: <User size={15} /> },
+  { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
+  { id: 'account', label: 'Account', icon: <Shield size={15} /> },
+]
 
 export function SettingsPage() {
   const { profile } = useCurrentUser()
   const { signOut } = useAuthActions()
   const navigate = useNavigate()
   const updateProfile = useMutation(api.users.updateProfile)
+  const { theme, setTheme, themes } = useTheme()
 
   const [username, setUsername] = useState(profile?.username ?? '')
   const [bio, setBio] = useState(profile?.bio ?? '')
   const [avatarEmoji, setAvatarEmoji] = useState(profile?.avatarEmoji ?? '')
   const [loading, setLoading] = useState(false)
-  const [section, setSection] = useState<'profile' | 'account' | 'privacy'>('profile')
+  const [section, setSection] = useState<Section>('profile')
+  const [debouncedUsername, setDebouncedUsername] = useState(username)
 
   useEffect(() => {
-    if (profile) {
-      setUsername(profile.username)
-      setBio(profile.bio ?? '')
-      setAvatarEmoji(profile.avatarEmoji ?? '')
-    }
+    if (profile) { setUsername(profile.username); setBio(profile.bio ?? ''); setAvatarEmoji(profile.avatarEmoji ?? '') }
   }, [profile])
 
-  // Username availability check
-  const [debouncedUsername, setDebouncedUsername] = useState(username)
   useEffect(() => {
     const t = setTimeout(() => setDebouncedUsername(username), 400)
     return () => clearTimeout(t)
@@ -40,9 +43,7 @@ export function SettingsPage() {
 
   const availability = useQuery(
     api.users.checkUsername,
-    debouncedUsername.length >= 3 && debouncedUsername !== profile?.username
-      ? { username: debouncedUsername }
-      : 'skip'
+    debouncedUsername.length >= 3 && debouncedUsername !== profile?.username ? { username: debouncedUsername } : 'skip'
   )
 
   const usernameChanged = username !== profile?.username
@@ -53,105 +54,83 @@ export function SettingsPage() {
     if (!usernameValid || !usernameAvailable || loading) return
     setLoading(true)
     try {
-      await updateProfile({
-        username: username.toLowerCase(),
-        bio: bio.trim() || undefined,
-        avatarEmoji: avatarEmoji || undefined,
-      })
-      toast.success('Profile updated!')
+      await updateProfile({ username: username.toLowerCase(), bio: bio.trim() || undefined, avatarEmoji: avatarEmoji || undefined })
+      toast.success('Profile updated')
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to update')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   async function handleSignOut() {
-    try {
-      await signOut()
-      navigate('/auth')
-    } catch {
-      toast.error('Failed to sign out')
-    }
+    try { await signOut(); navigate('/auth') }
+    catch { toast.error('Failed to sign out') }
   }
 
   if (!profile) return null
 
-  const { from, to } = getAvatarGradient(profile.avatarSeed)
-
-  const SECTIONS = [
-    { id: 'profile', label: 'Profile', icon: <User size={16} /> },
-    { id: 'account', label: 'Account', icon: <Shield size={16} /> },
-  ] as const
+  const darkThemes = themes.filter(t => t.dark)
+  const lightThemes = themes.filter(t => !t.dark)
 
   return (
-    <div className="space-y-6 animate-fade-up">
+    <div className="space-y-5 animate-fade-in">
       <div>
-        <h1 className="page-header">⚙️ Settings</h1>
-        <p className="text-sm text-ink-muted mt-0.5">Manage your anonymous identity</p>
+        <h1 className="text-base font-semibold" style={{ color: 'var(--text-1)' }}>Settings</h1>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Manage your profile and preferences</p>
       </div>
 
-      <div className="flex gap-6 lg:items-start lg:flex-row flex-col">
-        {/* Sidebar */}
-        <div className="lg:w-48 shrink-0">
+      <div className="flex gap-5 lg:items-start lg:flex-row flex-col">
+        {/* Sidebar nav */}
+        <div className="lg:w-44 shrink-0">
           <nav className="flex lg:flex-col gap-1">
             {SECTIONS.map(({ id, label, icon }) => (
               <button
                 key={id}
                 onClick={() => setSection(id)}
-                className={cn(
-                  'w-full text-left',
-                  section === id ? 'nav-item-active' : 'nav-item'
-                )}
+                className={`nav-item w-full text-left${section === id ? ' nav-item-active' : ''}`}
               >
-                {icon}
-                {label}
+                {icon} {label}
               </button>
             ))}
           </nav>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
+          {/* Profile section */}
           {section === 'profile' && (
-            <div className="card p-6 space-y-6">
-              <h2 className="font-semibold text-ink-primary flex items-center gap-2">
-                <PenLine size={16} />
-                Edit Profile
-              </h2>
+            <div className="panel p-5 space-y-5">
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Edit Profile</h2>
 
               {/* Avatar preview */}
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4">
                 <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-glow-sm"
-                  style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+                  className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl font-bold"
+                  style={{ background: 'var(--surface-4)', color: 'var(--text-1)' }}
                 >
                   {avatarEmoji || profile.username.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-ink-primary">@{profile.username}</p>
-                  <p className="text-xs text-ink-muted">Your avatar updates with your emoji choice</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>@{profile.username}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>Choose an emoji below</p>
                 </div>
               </div>
 
               {/* Emoji picker */}
               <div>
-                <label className="section-label mb-3 block">Avatar Emoji</label>
-                <div className="grid grid-cols-9 gap-1.5">
+                <label className="label block mb-2">Avatar Emoji</label>
+                <div className="grid grid-cols-9 gap-1">
                   {AVATAR_EMOJIS.map((emoji, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setAvatarEmoji(emoji)}
-                      className={cn(
-                        'aspect-square rounded-xl flex items-center justify-center text-lg transition-all',
-                        avatarEmoji === emoji
-                          ? 'bg-silo-500/20 ring-1 ring-silo-500'
-                          : 'bg-bg-elevated hover:bg-bg-overlay'
-                      )}
+                      className="aspect-square rounded flex items-center justify-center text-base transition-colors"
+                      style={{
+                        background: avatarEmoji === emoji ? 'var(--accent-subtle)' : 'var(--surface-3)',
+                        border: `1px solid ${avatarEmoji === emoji ? 'var(--accent-border)' : 'transparent'}`,
+                      }}
                     >
                       {emoji === '' ? (
-                        <span className="text-xs font-semibold text-ink-muted">
+                        <span className="text-[10px] font-semibold" style={{ color: 'var(--text-2)' }}>
                           {profile.username.slice(0, 2).toUpperCase()}
                         </span>
                       ) : emoji}
@@ -162,86 +141,153 @@ export function SettingsPage() {
 
               {/* Username */}
               <div>
-                <label className="section-label mb-2 block">Username</label>
+                <label className="label block mb-1.5">Username</label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted font-medium text-sm">@</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'var(--text-3)' }}>@</span>
                   <input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
-                    className="input-base pl-8 pr-10"
+                    onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
+                    className="input w-full pl-7 pr-9"
                   />
                   {usernameChanged && usernameValid && usernameAvailable === true && (
-                    <Check size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-400" />
+                    <Check size={14} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--success)' }} />
                   )}
                   {usernameChanged && (!usernameValid || usernameAvailable === false) && (
-                    <X size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-rose-400" />
+                    <X size={14} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--danger)' }} />
                   )}
                 </div>
                 {usernameChanged && usernameAvailable === false && (
-                  <p className="text-xs text-rose-400 mt-1">@{username} is already taken</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>@{username} is already taken</p>
                 )}
               </div>
 
               {/* Bio */}
               <div>
-                <label className="section-label mb-2 block">Bio</label>
+                <label className="label block mb-1.5">Bio</label>
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value.slice(0, 160))}
-                  placeholder="A short vibe check..."
+                  onChange={e => setBio(e.target.value.slice(0, 160))}
+                  placeholder="A short introduction..."
                   rows={3}
-                  className="input-base resize-none"
+                  className="input w-full resize-none"
                 />
-                <p className="text-xs text-ink-muted mt-1 text-right">{bio.length}/160</p>
+                <p className="text-xs text-right mt-1" style={{ color: 'var(--text-3)' }}>{bio.length}/160</p>
               </div>
 
               <button
                 onClick={handleSave}
                 disabled={loading || !usernameValid || usernameAvailable === false}
-                className="btn-primary"
+                className="btn btn-primary"
               >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : 'Save Changes'}
+                {loading ? <span className="spinner" /> : 'Save changes'}
               </button>
             </div>
           )}
 
-          {section === 'account' && (
-            <div className="space-y-4">
-              <div className="card p-6">
-                <h2 className="font-semibold text-ink-primary mb-4">Account</h2>
-                <p className="text-sm text-ink-secondary mb-6">
-                  Your real identity (Google account or email) is never shown to other users.
-                  Silo keeps your anonymous identity separate from your login.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-bg-elevated rounded-xl border border-border">
-                    <div>
-                      <p className="text-sm font-medium text-ink-primary">Anonymous Username</p>
-                      <p className="text-xs text-ink-muted">@{profile.username}</p>
-                    </div>
-                    <span className="badge-emerald">Active</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-bg-elevated rounded-xl border border-border">
-                    <div>
-                      <p className="text-sm font-medium text-ink-primary">Identity Protection</p>
-                      <p className="text-xs text-ink-muted">Real name hidden from all users</p>
-                    </div>
-                    <span className="badge-emerald">On</span>
-                  </div>
+          {/* Appearance section */}
+          {section === 'appearance' && (
+            <div className="panel p-5 space-y-5">
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Theme</h2>
+
+              <div>
+                <p className="label block mb-3">Dark themes</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {darkThemes.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className="flex items-center gap-2.5 p-3 rounded border text-left transition-colors"
+                      style={{
+                        borderColor: theme === t.id ? 'var(--accent)' : 'var(--border-2)',
+                        background: theme === t.id ? 'var(--accent-subtle)' : 'var(--surface-3)',
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded flex items-center justify-center shrink-0"
+                        style={{ background: t.bg, border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        <div className="w-3 h-3 rounded-full" style={{ background: t.accent }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate" style={{ color: theme === t.id ? 'var(--accent-muted)' : 'var(--text-1)' }}>{t.label}</p>
+                      </div>
+                      {theme === t.id && <Check size={13} style={{ color: 'var(--accent-muted)', shrink: 0 }} />}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="card p-6">
-                <h3 className="font-semibold text-rose-400 mb-2">Sign Out</h3>
-                <p className="text-sm text-ink-secondary mb-4">
-                  You'll need to sign back in to access your posts and notifications.
+              <div>
+                <p className="label block mb-3">Light themes</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {lightThemes.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className="flex items-center gap-2.5 p-3 rounded border text-left transition-colors"
+                      style={{
+                        borderColor: theme === t.id ? 'var(--accent)' : 'var(--border-2)',
+                        background: theme === t.id ? 'var(--accent-subtle)' : 'var(--surface-3)',
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded flex items-center justify-center shrink-0"
+                        style={{ background: t.bg, border: '1px solid rgba(0,0,0,0.1)' }}
+                      >
+                        <div className="w-3 h-3 rounded-full" style={{ background: t.accent }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate" style={{ color: theme === t.id ? 'var(--accent-muted)' : 'var(--text-1)' }}>{t.label}</p>
+                      </div>
+                      {theme === t.id && <Check size={13} style={{ color: 'var(--accent-muted)' }} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Account section */}
+          {section === 'account' && (
+            <div className="space-y-4">
+              <div className="panel p-5">
+                <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-1)' }}>Account info</h2>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-2)' }}>
+                  Your real identity is never shown to other users. Silo keeps your anonymous identity separate from your login.
                 </p>
-                <button onClick={handleSignOut} className="btn-danger">
-                  <LogOut size={15} />
-                  Sign Out
+                <div className="space-y-2">
+                  {[
+                    { label: 'Anonymous username', value: `@${profile.username}`, badge: 'Active' },
+                    { label: 'Identity protection', value: 'Real name hidden from all users', badge: 'On' },
+                  ].map(item => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between p-3 rounded"
+                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border-1)' }}
+                    >
+                      <div>
+                        <p className="text-xs font-medium" style={{ color: 'var(--text-1)' }}>{item.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{item.value}</p>
+                      </div>
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: 'var(--success-bg)', color: 'var(--success)' }}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel p-5">
+                <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--danger)' }}>Sign out</h3>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-2)' }}>
+                  You'll need to sign back in to access your posts.
+                </p>
+                <button onClick={handleSignOut} className="btn btn-secondary" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>
+                  <LogOut size={14} /> Sign out
                 </button>
               </div>
             </div>

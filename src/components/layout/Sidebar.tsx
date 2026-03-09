@@ -1,14 +1,15 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import {
-  Flame, Compass, Bell, User, Settings,
-  MessageSquareMore, CircleHelp, LogOut, Plus
+  Rss, BookOpen, Compass, Bell, User, Settings,
+  CircleHelp, LogOut, Plus, Users, ChevronDown, Check,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { cn } from '@/lib/utils'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { TEAMS, getMyTeams, getCurrentTeam, setCurrentTeam } from '@/lib/teams'
 import toast from 'react-hot-toast'
 
 interface SidebarProps {
@@ -16,11 +17,12 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { icon: Flame, label: 'Feed', path: '/feed' },
-  { icon: MessageSquareMore, label: 'Confessions', path: '/confessions' },
-  { icon: Compass, label: 'Explore', path: '/explore' },
-  { icon: CircleHelp, label: 'Ask Me', path: '/ask' },
-  { icon: Bell, label: 'Notifications', path: '/notifications' },
+  { icon: Rss,           label: 'Feed',          path: '/feed' },
+  { icon: BookOpen,      label: 'Confessions',   path: '/confessions' },
+  { icon: Compass,       label: 'Explore',       path: '/explore' },
+  { icon: CircleHelp,    label: 'Ask',           path: '/ask' },
+  { icon: Bell,          label: 'Notifications', path: '/notifications' },
+  { icon: Users,         label: 'Teams',         path: '/teams' },
 ]
 
 export function Sidebar({ onCreatePost }: SidebarProps) {
@@ -28,42 +30,145 @@ export function Sidebar({ onCreatePost }: SidebarProps) {
   const { profile } = useCurrentUser()
   const { signOut } = useAuthActions()
   const unreadCount = useQuery(api.notifications.unreadCount) ?? 0
+  const [teamOpen, setTeamOpen] = useState(false)
+  const [currentTeamId, setCurrentTeamIdState] = useState(getCurrentTeam)
+  const myTeams = getMyTeams()
+  const currentTeam = TEAMS.find(t => t.id === currentTeamId)
 
   async function handleSignOut() {
     try {
       await signOut()
-      toast.success('Signed out')
     } catch {
       toast.error('Failed to sign out')
     }
   }
 
-  return (
-    <aside className="hidden md:flex flex-col w-64 xl:w-72 h-screen sticky top-0 pt-6 pb-4 px-3 shrink-0 border-r border-border/50">
-      {/* Logo */}
-      <Link to="/feed" className="flex items-center gap-2.5 px-3 mb-8 group">
-        <div className="w-8 h-8 rounded-xl bg-gradient-silo flex items-center justify-center shadow-glow-sm">
-          <span className="text-white font-black text-sm">S</span>
-        </div>
-        <span className="text-xl font-black text-ink-primary group-hover:text-glow transition-all">
-          silo
-        </span>
-      </Link>
+  function handleSelectTeam(id: string | null) {
+    setCurrentTeam(id)
+    setCurrentTeamIdState(id)
+    setTeamOpen(false)
+  }
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1">
+  return (
+    <aside
+      className="hidden md:flex flex-col w-[220px] xl:w-[240px] h-screen sticky top-0 shrink-0 border-r"
+      style={{ background: 'var(--surface-1)', borderColor: 'var(--border-1)' }}
+    >
+      {/* Logo */}
+      <div className="px-4 pt-5 pb-4">
+        <Link to="/feed" className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded flex items-center justify-center text-white font-black text-sm"
+            style={{ background: 'var(--accent)' }}
+          >
+            S
+          </div>
+          <span className="font-semibold tracking-tight" style={{ color: 'var(--text-1)' }}>
+            Silo
+          </span>
+        </Link>
+      </div>
+
+      {/* Team switcher */}
+      {myTeams.length > 0 && (
+        <div className="px-2 mb-2">
+          <button
+            onClick={() => setTeamOpen(o => !o)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors"
+            style={{
+              color: 'var(--text-2)',
+              background: teamOpen ? 'var(--surface-3)' : 'transparent',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = teamOpen ? 'var(--surface-3)' : 'transparent')}
+          >
+            {currentTeam ? (
+              <>
+                <span
+                  className="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white shrink-0"
+                  style={{ background: currentTeam.color }}
+                >
+                  {currentTeam.shortName[0]}
+                </span>
+                <span className="flex-1 text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>
+                  {currentTeam.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <Users size={14} className="shrink-0" />
+                <span className="flex-1 text-xs font-medium truncate">Personal</span>
+              </>
+            )}
+            <ChevronDown size={12} style={{ opacity: 0.5 }} />
+          </button>
+
+          {teamOpen && (
+            <div
+              className="mt-1 rounded border overflow-hidden"
+              style={{ background: 'var(--surface-2)', borderColor: 'var(--border-2)' }}
+            >
+              <button
+                onClick={() => handleSelectTeam(null)}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors"
+                style={{ color: currentTeamId === null ? 'var(--accent-muted)' : 'var(--text-2)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <Users size={12} className="shrink-0" />
+                <span className="flex-1">Personal</span>
+                {currentTeamId === null && <Check size={12} />}
+              </button>
+              {myTeams.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => handleSelectTeam(t.id)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors"
+                  style={{ color: currentTeamId === t.id ? 'var(--accent-muted)' : 'var(--text-2)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-3)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <span
+                    className="w-4 h-4 rounded-sm text-[9px] font-bold flex items-center justify-center text-white shrink-0"
+                    style={{ background: t.color }}
+                  >
+                    {t.shortName[0]}
+                  </span>
+                  <span className="flex-1 truncate">{t.name}</span>
+                  {currentTeamId === t.id && <Check size={12} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="flex-1 px-2 py-1 overflow-y-auto">
         {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
           const active = location.pathname.startsWith(path)
           const isNotif = path === '/notifications'
           return (
-            <Link key={path} to={path} className={cn(active ? 'nav-item-active' : 'nav-item')}>
+            <Link
+              key={path}
+              to={path}
+              className={`nav-item${active ? ' nav-item-active' : ''}`}
+            >
               <div className="relative shrink-0">
-                <Icon size={18} />
-                {isNotif && unreadCount > 0 && <span className="notif-dot" />}
+                <Icon size={16} strokeWidth={active ? 2.25 : 1.75} />
+                {isNotif && unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
+                    style={{ background: 'var(--danger)' }}
+                  />
+                )}
               </div>
               <span>{label}</span>
               {isNotif && unreadCount > 0 && (
-                <span className="ml-auto badge-rose text-xs px-1.5 py-0.5">
+                <span
+                  className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ background: 'var(--danger)', color: '#fff' }}
+                >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -72,28 +177,26 @@ export function Sidebar({ onCreatePost }: SidebarProps) {
         })}
       </nav>
 
-      {/* Create post button */}
-      <div className="px-0 mb-4">
+      {/* Compose */}
+      <div className="px-2 py-2">
         <button
           onClick={onCreatePost}
-          className="btn-primary w-full justify-center text-sm font-semibold"
+          className="btn btn-primary w-full justify-center text-sm"
         >
-          <Plus size={16} />
+          <Plus size={15} />
           New Post
         </button>
       </div>
 
-      {/* Divider */}
-      <div className="divider mb-4" />
-
-      {/* Profile + Settings */}
-      <div className="space-y-1">
+      {/* Bottom */}
+      <div
+        className="px-2 pt-2 pb-4 border-t"
+        style={{ borderColor: 'var(--border-1)' }}
+      >
         {profile && (
           <Link
             to={`/profile/${profile.username}`}
-            className={cn(
-              location.pathname === `/profile/${profile.username}` ? 'nav-item-active' : 'nav-item'
-            )}
+            className={`nav-item${location.pathname.startsWith('/profile') ? ' nav-item-active' : ''}`}
           >
             <Avatar
               username={profile.username}
@@ -101,23 +204,24 @@ export function Sidebar({ onCreatePost }: SidebarProps) {
               avatarEmoji={profile.avatarEmoji}
               size="sm"
             />
-            <div className="flex-1 min-w-0">
-              <span className="text-sm truncate block">@{profile.username}</span>
-            </div>
-            <User size={14} className="shrink-0 opacity-40" />
+            <span className="flex-1 text-sm truncate">@{profile.username}</span>
           </Link>
         )}
-
         <Link
           to="/settings"
-          className={cn(location.pathname === '/settings' ? 'nav-item-active' : 'nav-item')}
+          className={`nav-item${location.pathname === '/settings' ? ' nav-item-active' : ''}`}
         >
-          <Settings size={18} />
+          <Settings size={16} strokeWidth={1.75} />
           <span>Settings</span>
         </Link>
-
-        <button onClick={handleSignOut} className="nav-item w-full text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10">
-          <LogOut size={18} />
+        <button
+          onClick={handleSignOut}
+          className="nav-item w-full"
+          style={{ color: 'var(--danger)' }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          <LogOut size={16} strokeWidth={1.75} />
           <span>Sign out</span>
         </button>
       </div>

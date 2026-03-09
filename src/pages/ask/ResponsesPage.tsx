@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { timeAgo, REACTION_EMOJIS, cn } from '@/lib/utils'
+import { timeAgo, REACTION_EMOJIS } from '@/lib/utils'
 import { ArrowLeft, CircleHelp, Copy, ExternalLink, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -15,96 +15,64 @@ export function ResponsesPage() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
 
-  const question = useQuery(
-    api.questions.getById,
-    questionId ? { questionId: questionId as Id<'anonymousQuestions'> } : 'skip'
-  )
-  const responses = useQuery(
-    api.questions.listResponses,
-    questionId && user ? { questionId: questionId as Id<'anonymousQuestions'> } : 'skip'
-  )
-
+  const question = useQuery(api.questions.getById, questionId ? { questionId: questionId as Id<'anonymousQuestions'> } : 'skip')
+  const responses = useQuery(api.questions.listResponses, questionId && user ? { questionId: questionId as Id<'anonymousQuestions'> } : 'skip')
   const reactToResponse = useMutation(api.questions.reactToResponse)
 
   if (question === undefined) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="w-5 h-5 border-2 border-silo-500/30 border-t-silo-500 rounded-full animate-spin" />
+        <span className="spinner" />
       </div>
     )
   }
 
   if (!question) {
-    return (
-      <EmptyState
-        icon="🫙"
-        title="Question not found"
-        action={<Link to="/ask" className="btn-secondary">My Questions</Link>}
-      />
-    )
+    return <EmptyState icon="📭" title="Question not found" action={<Link to="/ask" className="btn btn-secondary">My Questions</Link>} />
   }
 
   if (question.ownerId !== user?._id) {
-    return (
-      <EmptyState
-        icon="🔒"
-        title="Not authorized"
-        description="Only the question owner can view responses."
-        action={<Link to="/ask" className="btn-secondary">Back</Link>}
-      />
-    )
+    return <EmptyState icon="🔒" title="Not authorized" description="Only the question owner can view responses." action={<Link to="/ask" className="btn btn-secondary">Back</Link>} />
   }
 
   const shareUrl = `${window.location.origin}/ask/${question.slug}`
 
   async function handleReact(responseId: Id<'anonymousResponses'>, reaction: string) {
-    try {
-      await reactToResponse({ responseId, reaction: reaction as any })
-    } catch {
-      toast.error('Failed to react')
-    }
-  }
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(shareUrl)
-    toast.success('Link copied!')
+    try { await reactToResponse({ responseId, reaction: reaction as any }) }
+    catch { toast.error('Failed to react') }
   }
 
   return (
-    <div className="space-y-5 animate-fade-up">
-      {/* Back */}
-      <button onClick={() => navigate('/ask')} className="btn-ghost -ml-2">
-        <ArrowLeft size={16} />
-        My Questions
+    <div className="space-y-4 animate-fade-in">
+      <button onClick={() => navigate('/ask')} className="btn btn-ghost -ml-1 text-sm">
+        <ArrowLeft size={15} /> My Questions
       </button>
 
       {/* Question header */}
-      <div className="card p-5">
+      <div className="panel p-5">
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-silo-500/20 border border-silo-500/30 flex items-center justify-center shrink-0">
-            <CircleHelp size={16} className="text-silo-400" />
+          <div
+            className="w-8 h-8 rounded flex items-center justify-center shrink-0"
+            style={{ background: 'var(--accent-subtle)', border: '1px solid var(--accent-border)' }}
+          >
+            <CircleHelp size={14} style={{ color: 'var(--accent-muted)' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-ink-primary text-sm leading-snug">{question.question}</p>
-            {question.description && (
-              <p className="text-xs text-ink-secondary mt-0.5">{question.description}</p>
-            )}
+            <p className="text-sm font-semibold leading-snug" style={{ color: 'var(--text-1)' }}>{question.question}</p>
+            {question.description && <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{question.description}</p>}
           </div>
         </div>
-
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-ink-secondary">
-            <MessageSquare size={14} />
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
+            <MessageSquare size={12} />
             {question.responseCount} {question.responseCount === 1 ? 'response' : 'responses'}
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleCopy} className="btn-secondary text-xs px-3 py-1.5">
-              <Copy size={13} />
-              Copy Link
+          <div className="flex gap-1.5">
+            <button onClick={() => navigator.clipboard.writeText(shareUrl).then(() => toast.success('Link copied'))} className="btn btn-secondary text-xs px-2.5 py-1.5">
+              <Copy size={12} /> Copy link
             </button>
-            <a href={shareUrl} target="_blank" rel="noopener" className="btn-secondary text-xs px-3 py-1.5">
-              <ExternalLink size={13} />
-              Preview
+            <a href={shareUrl} target="_blank" rel="noopener" className="btn btn-secondary text-xs px-2.5 py-1.5">
+              <ExternalLink size={12} /> Preview
             </a>
           </div>
         </div>
@@ -112,11 +80,11 @@ export function ResponsesPage() {
 
       {/* Responses */}
       {responses === undefined ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card p-5 animate-pulse">
-              <div className="h-4 bg-bg-elevated rounded w-full mb-2" />
-              <div className="h-4 bg-bg-elevated rounded w-5/6" />
+        <div className="feed-list">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="feed-item space-y-2">
+              <div className="skeleton h-4 w-full rounded" />
+              <div className="skeleton h-4 w-5/6 rounded" />
             </div>
           ))}
         </div>
@@ -126,53 +94,45 @@ export function ResponsesPage() {
           title="No responses yet"
           description="Share your link to start collecting anonymous answers!"
           action={
-            <button onClick={handleCopy} className="btn-primary">
-              <Copy size={15} />
-              Copy Share Link
+            <button onClick={() => navigator.clipboard.writeText(shareUrl).then(() => toast.success('Link copied'))} className="btn btn-primary">
+              <Copy size={14} /> Copy share link
             </button>
           }
         />
       ) : (
-        <div className="space-y-3">
-          <p className="text-xs text-ink-muted">{responses.length} anonymous responses</p>
-          {responses.map((r) => (
-            <div
-              key={r._id}
-              className={cn(
-                'card p-5 space-y-3',
-                !r.isRead && 'border-silo-500/20 bg-silo-500/5'
-              )}
-            >
-              {/* Content */}
-              <p className="text-sm text-ink-primary leading-relaxed whitespace-pre-wrap">
-                {r.content}
-              </p>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-ink-muted">{timeAgo(r.createdAt)}</span>
-
-                {/* Reaction buttons */}
-                <div className="flex items-center gap-1">
-                  {REACTIONS.map((reaction) => (
-                    <button
-                      key={reaction}
-                      onClick={() => handleReact(r._id, reaction)}
-                      className={cn(
-                        'w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all',
-                        r.reaction === reaction
-                          ? 'bg-silo-500/20 ring-1 ring-silo-500/40 scale-110'
-                          : 'bg-bg-elevated hover:bg-bg-overlay hover:scale-110'
-                      )}
-                      title={reaction}
-                    >
-                      {REACTION_EMOJIS[reaction]}
-                    </button>
-                  ))}
+        <div>
+          <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>{responses.length} anonymous responses</p>
+          <div className="feed-list">
+            {responses.map(r => (
+              <div
+                key={r._id}
+                className="feed-item space-y-3"
+                style={!r.isRead ? { borderLeft: '2px solid var(--accent)' } : {}}
+              >
+                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-1)' }}>{r.content}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: 'var(--text-3)' }}>{timeAgo(r.createdAt)}</span>
+                  <div className="flex items-center gap-1">
+                    {REACTIONS.map(reaction => (
+                      <button
+                        key={reaction}
+                        onClick={() => handleReact(r._id, reaction)}
+                        className="w-7 h-7 rounded flex items-center justify-center text-sm transition-all"
+                        style={{
+                          background: r.reaction === reaction ? 'var(--accent-subtle)' : 'var(--surface-3)',
+                          border: `1px solid ${r.reaction === reaction ? 'var(--accent-border)' : 'transparent'}`,
+                          transform: r.reaction === reaction ? 'scale(1.1)' : '',
+                        }}
+                        title={reaction}
+                      >
+                        {REACTION_EMOJIS[reaction]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

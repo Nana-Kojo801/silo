@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 // Pages
 import { AuthPage } from '@/pages/auth/AuthPage'
@@ -16,6 +17,7 @@ import { SettingsPage } from '@/pages/settings/SettingsPage'
 import { AskPage } from '@/pages/ask/AskPage'
 import { QuestionPage } from '@/pages/ask/QuestionPage'
 import { ResponsesPage } from '@/pages/ask/ResponsesPage'
+import { TeamsPage } from '@/pages/teams/TeamsPage'
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isAuthLoading, hasProfile } = useCurrentUser()
@@ -23,12 +25,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isAuthLoading) {
     return (
-      <div className="flex items-center justify-center min-h-dvh">
+      <div
+        className="flex items-center justify-center min-h-dvh"
+        style={{ background: 'var(--surface-base)' }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-silo flex items-center justify-center shadow-glow">
-            <span className="text-white font-black text-lg">S</span>
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-base"
+            style={{ background: 'var(--accent)' }}
+          >
+            S
           </div>
-          <div className="w-5 h-5 border-2 border-silo-500/30 border-t-silo-500 rounded-full animate-spin" />
+          <span className="spinner" />
         </div>
       </div>
     )
@@ -51,46 +59,49 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route path="/auth" element={<AuthPageGuard />} />
-        <Route path="/ask/:slug" element={<QuestionPage />} />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/auth" element={<AuthPageGuard />} />
+          <Route path="/ask/:slug" element={<QuestionPage />} />
 
-        {/* Onboarding (auth required, no profile yet) */}
-        <Route
-          path="/onboarding"
-          element={
-            <AuthGuard>
-              <OnboardingPage />
-            </AuthGuard>
-          }
-        />
+          {/* Onboarding */}
+          <Route
+            path="/onboarding"
+            element={
+              <AuthGuard>
+                <OnboardingPage />
+              </AuthGuard>
+            }
+          />
 
-        {/* App shell */}
-        <Route
-          element={
-            <AuthGuard>
-              <AppLayout />
-            </AuthGuard>
-          }
-        >
-          <Route index element={<Navigate to="/feed" replace />} />
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/post/:postId" element={<PostPage />} />
-          <Route path="/confessions" element={<ConfessionsPage />} />
-          <Route path="/confessions/:postId" element={<ConfessionDetailPage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/profile/:username" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/ask" element={<AskPage />} />
-          <Route path="/ask/:questionId/responses" element={<ResponsesPage />} />
-        </Route>
+          {/* App shell */}
+          <Route
+            element={
+              <AuthGuard>
+                <AppLayout />
+              </AuthGuard>
+            }
+          >
+            <Route index element={<Navigate to="/feed" replace />} />
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/post/:postId" element={<PostPage />} />
+            <Route path="/confessions" element={<ConfessionsPage />} />
+            <Route path="/confessions/:postId" element={<ConfessionDetailPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/profile/:username" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ask" element={<AskPage />} />
+            <Route path="/ask/:questionId/responses" element={<ResponsesPage />} />
+            <Route path="/teams" element={<TeamsPage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/feed" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/feed" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
